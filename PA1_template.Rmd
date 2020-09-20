@@ -7,11 +7,26 @@ output:
 
 
 ## Loading and preprocessing the data
+```{r  echo=T}
+unzip("activity.zip")
+monitoring_data<-read.csv("activity.csv")
+daily_steps<-aggregate(x=monitoring_data$steps,by = list(monitoring_data$date),FUN=sum,na.rm=T)
+```
 
 
 
 ## What is mean total number of steps taken per day?
 
+```{r  echo=TRUE}
+dailymean<-mean(daily_steps$x)
+dailymean
+dailymed<-median(daily_steps$x) 
+dailymed
+```
+Knowing the mean and median before creating the plot facilitates to create the histogram plot.
+```{r echo=T}
+hist(x=daily_steps$x,main = "Total daily steps",xlab = "Steps",breaks = 20,xlim=c(0,25000),ylim=c(0,10))
+```
 
 
 ## What is the average daily activity pattern?
