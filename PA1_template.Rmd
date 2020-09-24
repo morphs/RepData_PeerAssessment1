@@ -7,34 +7,72 @@ output:
 
 
 ## Loading and preprocessing the data
+This part is quite straightforward. I usually remove the NAs, but it's easier to explain the mean/median if the NAs are not removed. 
+
 ```{r  echo=T}
 unzip("activity.zip")
 monitoring_data<-read.csv("activity.csv")
-daily_steps<-aggregate(x=monitoring_data$steps,by = list(monitoring_data$date),FUN=sum,na.rm=T)
+daily_steps<-aggregate(x=monitoring_data$steps,by = list(monitoring_data$date),FUN=sum,na.rm=F)
 ```
 
 
 
 ## What is mean total number of steps taken per day?
-
+This is also quite straightforward.
 ```{r  echo=TRUE}
-dailymean<-mean(daily_steps$x)
+dailymean<-mean(daily_steps$x,na.rm=T)
 dailymean
-dailymed<-median(daily_steps$x) 
+dailymed<-median(daily_steps$x,na.rm=T) 
 dailymed
 ```
+
 Knowing the mean and median before creating the plot facilitates to create the histogram plot.
+
 ```{r echo=T}
 hist(x=daily_steps$x,main = "Total daily steps",xlab = "Steps",breaks = 20,xlim=c(0,25000),ylim=c(0,10))
 ```
 
 
 ## What is the average daily activity pattern?
+```{r echo=T}
+daily_steps<-aggregate(x=monitoring_data$steps,by = list(monitoring_data$interval),FUN=mean,na.rm=T)
+plot(daily_steps,type="l",xlab="interval",ylab="Average Steps", main="Average Daily Activity")
 
-
-
+daily_steps[which.max(daily_steps$x),]
+```
 ## Imputing missing values
+The total number of missing values can be calculated in many ways in this dataframe, just making a sum of NA values in steps is one way, another way is:
+```{r echo=T}
+sum(!complete.cases(monitoring_data))
+```
+I decided to fill the NAs with the mean, therefore I can use the last dataframe with the means for each interval, also, I checked if there was any other column with NAs, but only steps has NA values.:
+```{r echo=T}
+filled_monitoring_data<-monitoring_data
 
+filled_monitoring_data$steps<-ifelse(is.na(filled_monitoring_data$steps),daily_steps$x, filled_monitoring_data$steps)
 
+filled_daily_steps<-aggregate(x=filled_monitoring_data$steps,by = list(filled_monitoring_data$date),FUN=sum,na.rm=T)
+hist(x=filled_daily_steps$x,main = "Total daily steps",xlab = "Steps",breaks = 20,xlim=c(0,25000),ylim=c(0,20))
+mean(filled_daily_steps$x)
+median(filled_daily_steps$x)
+```
+
+It is possible to notice that the median and mean are the same or almost the same, as the NAs were not removed from the first aggregate. If you remove the NAs the mean will be smaller, but not by much. 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+First, it is necessary to transform the dates and find the weekdays and weekends.
+
+```{r echo=T}
+filled_monitoring_data$day<- ifelse(as.POSIXlt(as.Date(filled_monitoring_data$date))$wday%%6==0,"weekend","weekday")
+filled_monitoring_data$day=factor(filled_monitoring_data$day, levels=c("weekday","weekend"))
+```
+
+Now I just prepared the data to be shown in a proper way, separating weekdays from weekends by interval and then created the plot with the ggplot2 library.
+```{r echo=T}
+library(ggplot2)
+filled_daily_steps=aggregate(x=filled_monitoring_data$steps,by=list(filled_monitoring_data$interval,filled_monitoring_data$day),mean)
+ggplot(data=filled_daily_steps, aes(Group.1)) + 
+    geom_line(aes(y = x, colour = Group.2)) + 
+    geom_line(aes(y = x, colour = Group.2))+
+    labs(title="Weekdays vs Weekends average steps",x="Interval",y="Average Steps", color="Day")
+```
